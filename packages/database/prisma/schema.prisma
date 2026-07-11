@@ -1,0 +1,75 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+
+enum OrderStatus { DRAFT CONFIRMED IN_KITCHEN PREPARING READY COMPLETED CANCELLED }
+enum AttendanceType { CLOCK_IN CLOCK_OUT }
+
+model Branch {
+  id String @id @default(cuid())
+  name String
+  categories Category[]
+  products Product[]
+  orders Order[]
+  employees Employee[]
+}
+
+model Category {
+  id String @id @default(cuid())
+  branchId String
+  nameAr String
+  branch Branch @relation(fields:[branchId],references:[id],onDelete:Cascade)
+  products Product[]
+}
+
+model Product {
+  id String @id @default(cuid())
+  branchId String
+  categoryId String
+  nameAr String
+  price Decimal @db.Decimal(10,3)
+  isActive Boolean @default(true)
+  branch Branch @relation(fields:[branchId],references:[id],onDelete:Cascade)
+  category Category @relation(fields:[categoryId],references:[id])
+  items OrderItem[]
+}
+
+model Order {
+  id String @id @default(cuid())
+  branchId String
+  displayNo Int
+  status OrderStatus @default(DRAFT)
+  total Decimal @db.Decimal(10,3)
+  branch Branch @relation(fields:[branchId],references:[id],onDelete:Cascade)
+  items OrderItem[]
+  createdAt DateTime @default(now())
+  @@unique([branchId,displayNo])
+}
+
+model OrderItem {
+  id String @id @default(cuid())
+  orderId String
+  productId String
+  quantity Int
+  unitPrice Decimal @db.Decimal(10,3)
+  order Order @relation(fields:[orderId],references:[id],onDelete:Cascade)
+  product Product @relation(fields:[productId],references:[id])
+}
+
+model Employee {
+  id String @id @default(cuid())
+  branchId String
+  employeeNo String
+  fullName String
+  branch Branch @relation(fields:[branchId],references:[id],onDelete:Cascade)
+  attendance AttendanceRecord[]
+  @@unique([branchId,employeeNo])
+}
+
+model AttendanceRecord {
+  id String @id @default(cuid())
+  employeeId String
+  type AttendanceType
+  recordedAt DateTime @default(now())
+  method String?
+  employee Employee @relation(fields:[employeeId],references:[id],onDelete:Cascade)
+}

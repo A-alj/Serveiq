@@ -1,24 +1,24 @@
-# ServeIQ Starter v0.1
+# ServeIQ v0.2
 
-نواة مشروع ServeIQ لإدارة مطعم حمسة مجالس.
+نسخة تفاعلية قابلة للنشر على Vercel.
 
-## يحتوي على
-- واجهة Next.js عربية.
-- API باستخدام NestJS.
-- PostgreSQL + Prisma.
-- Docker Compose.
-- منيو حمسة مجالس.
-- أساس الحضور والانصراف لإضافة البصمة لاحقًا.
+## الجديد
+- POS حقيقي داخل المتصفح.
+- زيادة ونقصان وحذف الأصناف.
+- طرق دفع: KNET، نقدي، Visa.
+- رقم طلب تلقائي.
+- إرسال مباشر إلى KDS.
+- حالات الطلب: جديد، تحضير، جاهز، تم التسليم.
+- Dashboard يتحدث تلقائيًا.
+- حفظ الطلبات داخل المتصفح باستخدام localStorage.
 
 ## التشغيل
 ```bash
-cp .env.example .env
 pnpm install
-docker compose up -d
-pnpm db:generate
-pnpm db:push
 pnpm dev
 ```
 
-Web: http://localhost:3000  
-API: http://localhost:3001/api/health
+## النشر
+ارفع الملفات إلى GitHub، وسيقوم Vercel بالنشر تلقائيًا إذا كان المستودع مربوطًا به.
+
+> هذه النسخة لا تستخدم قاعدة بيانات سحابية بعد. الطلبات محفوظة على نفس الجهاز والمتصفح فقط.

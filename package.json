@@ -1,10 +1,21 @@
 {
   "name": "serveiq",
+  "version": "0.2.0",
   "private": true,
-  "packageManager": "pnpm@9.15.0",
   "scripts": {
-    "dev": "pnpm --parallel --filter @serveiq/web --filter @serveiq/api dev",
-    "db:generate": "pnpm --filter @serveiq/database prisma:generate",
-    "db:push": "pnpm --filter @serveiq/database prisma:push"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "15.1.4",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.5",
+    "@types/react": "19.0.3",
+    "@types/react-dom": "19.0.2",
+    "typescript": "5.7.2"
   }
 }

@@ -28,14 +28,23 @@ export default function Home() {
   const [payment, setPayment] = useState<Payment>("KNET");
   const [orderNote, setOrderNote] = useState("");
   const [toast, setToast] = useState("");
+  const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
-    const saved = localStorage.getItem("serveiq-orders-v02");
-    if (saved) setOrders(JSON.parse(saved));
+    try {
+      const saved = localStorage.getItem("serveiq-orders-v03");
+      if (saved) setOrders(JSON.parse(saved));
+    } catch {
+      setSubmitError("تعذر قراءة الطلبات المحفوظة على هذا الجهاز.");
+    }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("serveiq-orders-v02", JSON.stringify(orders));
+    try {
+      localStorage.setItem("serveiq-orders-v03", JSON.stringify(orders));
+    } catch {
+      setSubmitError("تعذر حفظ الطلب على هذا الجهاز.");
+    }
   }, [orders]);
 
   const total = useMemo(() => cart.reduce((s, x) => s + x.price * x.qty, 0), [cart]);
@@ -60,14 +69,31 @@ export default function Home() {
   function qty(id: string, delta: number) {
     setCart(c => c.map(x => x.id === id ? { ...x, qty: x.qty + delta } : x).filter(x => x.qty > 0));
   }
-  function submit() {
-    if (!cart.length) return;
-    const nextNo = orders.length ? Math.max(...orders.map(o => o.no)) + 1 : 1001;
-    const order: Order = { id: crypto.randomUUID(), no: nextNo, createdAt: new Date().toISOString(), items: cart, total, payment, status: "NEW", note: orderNote };
-    setOrders(o => [order, ...o]);
-    setCart([]); setOrderNote("");
-    notify(`تم إرسال الطلب #${nextNo} للمطبخ`);
-    setView("kds");
+  function makeId() {
+    try {
+      if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+    } catch {}
+    return `order-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
+  function submit(event?: React.FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
+    setSubmitError("");
+    if (!cart.length) {
+      setSubmitError("أضف صنفًا واحدًا على الأقل قبل إرسال الطلب.");
+      return;
+    }
+    try {
+      const nextNo = orders.length ? Math.max(...orders.map(o => o.no)) + 1 : 1001;
+      const order: Order = { id: makeId(), no: nextNo, createdAt: new Date().toISOString(), items: cart.map(item => ({ ...item })), total, payment, status: "NEW", note: orderNote.trim() };
+      setOrders(current => [order, ...current]);
+      setCart([]);
+      setOrderNote("");
+      notify(`تم إرسال الطلب #${nextNo} للمطبخ`);
+      setView("kds");
+    } catch (error) {
+      console.error("ServeIQ submit failed", error);
+      setSubmitError("تعذر إرسال الطلب. حدّث الصفحة وحاول مرة ثانية.");
+    }
   }
   function updateStatus(id: string, status: Status) {
     setOrders(o => o.map(x => x.id === id ? { ...x, status } : x));
@@ -88,7 +114,7 @@ export default function Home() {
       </nav>
     </aside>
     <main className="main">
-      <div className="header"><div><h1>{view==="dashboard"?"لوحة التحكم":view==="pos"?"الكاشير POS":view==="kds"?"شاشة المطبخ":"سجل الطلبات"}</h1><div className="muted">ServeIQ v0.2 — حمسة مجالس</div></div><div className="top-actions"><button className="reset" onClick={resetDemo}>مسح البيانات التجريبية</button></div></div>
+      <div className="header"><div><h1>{view==="dashboard"?"لوحة التحكم":view==="pos"?"الكاشير POS":view==="kds"?"شاشة المطبخ":"سجل الطلبات"}</h1><div className="muted">ServeIQ v0.3 — حمسة مجالس</div></div><div className="top-actions"><button className="reset" onClick={resetDemo}>مسح البيانات التجريبية</button></div></div>
 
       {view === "dashboard" && <>
         <section className="grid cards">
@@ -105,12 +131,12 @@ export default function Home() {
 
       {view === "pos" && <section className="grid two">
         <div className="grid products">{PRODUCTS.map(p => <button className="product" key={p.id} onClick={()=>add(p)}><div className="muted">{p.category}</div><h3>{p.name}</h3><div className="price">{p.price.toFixed(3)} د.ك</div></button>)}</div>
-        <div className="card"><h2>الطلب الحالي</h2>{!cart.length && <div className="empty">اضغط على صنف لإضافته</div>}
+        <form className="card" onSubmit={submit}><h2>الطلب الحالي</h2>{!cart.length && <div className="empty">اضغط على صنف لإضافته</div>}
           {cart.map(i => <div className="order-line" key={i.id}><div><strong>{i.name}</strong><div className="qty"><button onClick={()=>qty(i.id,1)}>+</button><span>{i.qty}</span><button onClick={()=>qty(i.id,-1)}>-</button><button className="ghost danger" onClick={()=>setCart(c=>c.filter(x=>x.id!==i.id))}>حذف</button></div></div><strong>{(i.price*i.qty).toFixed(3)}</strong></div>)}
           <textarea className="field" placeholder="ملاحظة على الطلب: بدون بصل، زيادة دقوس..." value={orderNote} onChange={e=>setOrderNote(e.target.value)} />
           <div className="pay-grid">{(["KNET","CASH","VISA"] as Payment[]).map(p=><button key={p} className={`pay ${payment===p?"active":""}`} onClick={()=>setPayment(p)}>{p==="CASH"?"نقدي":p}</button>)}</div>
-          <div className="total">الإجمالي: {total.toFixed(3)} د.ك</div><button className="primary" disabled={!cart.length} onClick={submit}>تأكيد وإرسال للمطبخ</button>
-        </div>
+          <div className="total">الإجمالي: {total.toFixed(3)} د.ك</div>{submitError&&<div className="error-box">{submitError}</div>}<button type="submit" className="primary" disabled={!cart.length}>تأكيد وإرسال للمطبخ</button>
+        </form>
       </section>}
 
       {view === "kds" && <section className="grid kds">{orders.filter(o=>o.status!=="COMPLETED").map(o => <article className={`ticket ${o.status.toLowerCase()}`} key={o.id}><div className="ticket-head"><h2>طلب #{o.no}</h2><span className="badge">{statusLabel[o.status]}</span></div><div className="muted">{new Date(o.createdAt).toLocaleTimeString("ar-KW",{hour:"2-digit",minute:"2-digit"})}</div>{o.items.map(i=><p key={i.id}>{i.name} × {i.qty}</p>)}{o.note&&<p><strong>ملاحظة:</strong> {o.note}</p>}<strong>{o.total.toFixed(3)} د.ك — {o.payment}</strong><div className="status-actions">{o.status==="NEW"&&<button onClick={()=>updateStatus(o.id,"PREPARING")}>ابدأ التحضير</button>}{o.status==="PREPARING"&&<button onClick={()=>updateStatus(o.id,"READY")}>جاهز</button>}{o.status==="READY"&&<button onClick={()=>updateStatus(o.id,"COMPLETED")}>تم التسليم</button>}</div></article>)}{!orders.some(o=>o.status!=="COMPLETED")&&<div className="card empty">لا توجد طلبات حالية في المطبخ.</div>}</section>}
